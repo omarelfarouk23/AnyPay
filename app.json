@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "Anypay",
+    "slug": "anypay",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "anypay",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1A2E6B"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.anypay.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1A2E6B"
+      },
+      "package": "com.anypay.app"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": []
+  }
+}
