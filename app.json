@@ -22,8 +22,11 @@
         "NSFaceIDUsageDescription": "يحتاج تطبيق Anypay لاستخدام البصمة الوجهية (Face ID) لتأكيد الدفع بأمان",
         "UIBackgroundModes": [
           "fetch",
+          "remote-notification",
+          "fetch",
           "remote-notification"
-        ]
+        ],
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
