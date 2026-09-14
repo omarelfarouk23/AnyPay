@@ -8,7 +8,6 @@ on:
 
 env:
   NODE_VERSION: '20'
-  EXPO_CLI_VERSION: '>= 10.0.0'
 
 jobs:
   quality:
@@ -47,17 +46,17 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
+      - name: Setup Expo & EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
       - name: Install dependencies
         run: npm ci
 
       - name: EAS Build (Preview - Android APK)
-        uses: expo/eas-build-action@v3
-        with:
-          eas-config: eas.json
-          profile: preview
-          platform: android
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: eas build --profile preview --platform android --non-interactive
 
   eas-development:
     name: EAS Development Build (push to dev branches)
@@ -72,17 +71,17 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
+      - name: Setup Expo & EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
       - name: Install dependencies
         run: npm ci
 
       - name: EAS Build (Development - Android APK)
-        uses: expo/eas-build-action@v3
-        with:
-          eas-config: eas.json
-          profile: development
-          platform: android
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: eas build --profile development --platform android --non-interactive
 
   eas-production:
     name: EAS Production Build (push to master/main)
@@ -97,23 +96,17 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
+      - name: Setup Expo & EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
       - name: Install dependencies
         run: npm ci
 
       - name: EAS Build (Production - Android App Bundle)
-        uses: expo/eas-build-action@v3
-        with:
-          eas-config: eas.json
-          profile: production
-          platform: android
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: eas build --profile production --platform android --non-interactive
 
       - name: EAS Build (Production - iOS)
-        uses: expo/eas-build-action@v3
-        with:
-          eas-config: eas.json
-          profile: production
-          platform: ios
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: eas build --profile production --platform ios --non-interactive
