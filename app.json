@@ -14,7 +14,17 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anypay.app"
+      "bundleIdentifier": "com.anypay.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "يحتاج تطبيق Anypay للوصول إلى الكاميرا لالتقاط صور فواتير الدفع والمراجعات",
+        "NSPhotoLibraryUsageDescription": "يحتاج تطبيق Anypay للوصول إلى المعرض لاختيار صور الفواتير والملفات",
+        "NSPhotoLibraryAddUsageDescription": "يحتاج تطبيق Anypay لحفظ الصور في المعرض",
+        "NSFaceIDUsageDescription": "يحتاج تطبيق Anypay لاستخدام البصمة الوجهية (Face ID) لتأكيد الدفع بأمان",
+        "UIBackgroundModes": [
+          "fetch",
+          "remote-notification"
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -26,6 +36,14 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": []
+    "plugins": [
+      "expo-asset",
+      "expo-notifications"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "fed835cd-8691-4ba6-961e-0a8ac50725dc"
+      }
+    }
   }
 }

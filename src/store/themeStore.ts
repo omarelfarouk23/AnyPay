@@ -1,0 +1,15 @@
+// src/store/themeStore.ts
+// حالة المظهر — يُستخدم إذا أُضيفت ميزة تبديل السمة مستقبلاً
+import { create } from 'zustand';
+
+export type ThemeMode = 'light' | 'dark' | 'system';
+
+interface ThemeStore {
+  mode: ThemeMode;
+  setMode: (mode: ThemeMode) => void;
+}
+
+export const useThemeStore = create<ThemeStore>()((set) => ({
+  mode: 'light',
+  setMode: (mode) => set({ mode }),
+}));

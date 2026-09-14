@@ -1,10 +1,10 @@
+// src/types/wallet.ts
 export interface Wallet {
   id: string;
   userId: string;
   balance: number;
-  availableBalance: number;
+  totalBalance: number;
   currency: string;
-  status: 'active' | 'frozen' | 'pending';
   createdAt: string;
   updatedAt: string;
 }
@@ -12,75 +12,46 @@ export interface Wallet {
 export interface Transaction {
   id: string;
   walletId: string;
-  type: TransactionType;
+  userId: string;
+  type: 'send' | 'receive' | 'transfer' | 'fee' | 'refund';
   amount: number;
-  currency: string;
-  status: TransactionStatus;
-  description: string;
-  counterparty?: string;
-  counterpartyId?: string;
-  reference?: string;
   fee?: number;
-  receiverId?: string;
+  balanceAfter: number;
+  counterparty?: {
+    id: string;
+    name: string;
+    phoneNumber?: string;
+    avatarUrl?: string;
+  };
+  status: 'pending' | 'completed' | 'failed' | 'cancelled';
   createdAt: string;
-  updatedAt: string;
-}
-
-export type TransactionType =
-  | 'sent'
-  | 'received'
-  | 'transfer'
-  | 'payment'
-  | 'refund'
-  | 'withdrawal'
-  | 'deposit';
-
-export type TransactionStatus =
-  | 'completed'
-  | 'pending'
-  | 'failed'
-  | 'processing';
-
-export interface SendMoneyRequest {
-  amount: number;
-  currency: string;
-  recipientId: string;
   description?: string;
-  fee?: number;
+  reference?: string;
 }
 
 export interface PaymentMethod {
   id: string;
-  type: 'card' | 'bank' | 'wallet' | 'cash';
+  type: 'bank' | 'wallet' | 'cash' | 'card' | 'other';
   label: string;
-  icon?: string;
+  isAvailable: boolean;
   isDefault?: boolean;
-  lastFourDigits?: string;
-  bankName?: string;
-  expiresAt?: string;
-  color?: string;
-  isAvailable?: boolean;
-  name?: string;
+  metadata?: Record<string, unknown>;
 }
 
-export interface WalletState {
-  wallet: Wallet | null;
-  balance: number | null;
-  currency: string;
-  transactions: Transaction[];
-  paymentMethods: PaymentMethod[];
-  isLoading: boolean;
-  isSending: boolean;
-  error: string | null;
+export interface SendMoneyRequest {
+  recipientPhoneNumber: string;
+  amount: number;
+  description?: string;
+  currency?: string;
+  message?: string;
 }
 
-export interface WalletActions {
-  setWallet: (wallet: Wallet | null) => void;
-  setTransactions: (transactions: Transaction[]) => void;
-  addTransaction: (transaction: Transaction) => void;
-  setPaymentMethods: (methods: PaymentMethod[]) => void;
-  setLoading: (loading: boolean) => void;
-  setSending: (sending: boolean) => void;
-  setError: (error: string | null) => void;
-  clearWallet: () => void;
+export interface TransactionFilter {
+  type?: Transaction['type'];
+  status?: Transaction['status'];
+  startDate?: string;
+  endDate?: string;
+  searchQuery?: string;
+  page?: number;
+  limit?: number;
 }

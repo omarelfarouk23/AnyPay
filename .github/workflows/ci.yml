@@ -1,0 +1,56 @@
+name: Anypay CI
+
+on:
+  push:
+    branches: [master, main, develop]
+  pull_request:
+    branches: [master, main, develop]
+
+jobs:
+  quality:
+    name: TypeScript & Test Gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript编译 (noEmit)
+        run: npx tsc --noEmit
+
+      - name: Expo Doctor
+        run: npx expo-doctor --verbose
+
+      - name: Unit Tests
+        run: npm test
+
+  eas-preview:
+    name: EAS Preview Build (Android)
+    runs-on: ubuntu-latest
+    needs: quality
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: EAS Build (Preview)
+        uses: expo/eas-build-action@v3
+        with:
+          eas-config: eas.json
+          profile: preview
+          platform: android
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}

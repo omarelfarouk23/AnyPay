@@ -8,6 +8,7 @@ export interface MessageBubbleProps {
   outgoing?: boolean;
   timestamp?: string;
   status?: 'sent' | 'delivered' | 'read';
+  senderName?: string;
   isImage?: boolean;
   imageUri?: string;
   style?: ViewStyle;
@@ -17,7 +18,7 @@ export interface MessageBubbleProps {
 const statusIcons = {
   sent: '✓',
   delivered: '✓✓',
-  read: '✓✓',
+  read: '✓✓ 파란색',
 };
 
 const statusColors = {
@@ -31,6 +32,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   outgoing = false,
   timestamp,
   status,
+  senderName,
   isImage = false,
   imageUri,
   style,
@@ -59,7 +61,14 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             <Text style={styles.imagePlaceholder}>🖼️</Text>
           </View>
         ) : (
-          <Text style={[styles.messageText, {color: textColor}]}>{text}</Text>
+          <>
+            {senderName && (
+              <Text style={[styles.senderName, {color: outgoing ? 'rgba(255,255,255,0.7)' : colors.textTertiary}]}>
+                {senderName}
+              </Text>
+            )}
+            <Text style={[styles.messageText, {color: textColor}]}>{text}</Text>
+          </>
         )}
         <View style={[styles.footer, alignment]}>
           {timestamp && (
@@ -107,6 +116,11 @@ const styles = StyleSheet.create({
   },
   imageBubble: {
     borderRadius: 12,
+  },
+  senderName: {
+    fontSize: typography.xs,
+    fontWeight: typography.weights.medium,
+    marginBottom: 2,
   },
   messageText: {
     fontSize: typography.md,

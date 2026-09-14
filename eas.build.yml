@@ -1,0 +1,32 @@
+# EAS Build CI/CD overlay
+# يُستخدم بواسطة expo/eas-build-action في GitHub Actions
+# يُكمّل eas.json ولا يُستبدل به
+
+build:
+  development:
+    name: Anypay Development
+    channel: development
+    environment: development
+    ios:
+      simulator: true
+    android:
+      buildType: apk
+
+  preview:
+    name: Anypay Preview
+    channel: preview
+    environment: preview
+    ios:
+      simulator: false
+    android:
+      buildType: apk
+
+  production:
+    name: Anypay Production
+    channel: production
+    environment: production
+    ios:
+      bundleIdentifier: com.anypay.app
+    android:
+      buildType: app-bundle
+      package: com.anypay.app

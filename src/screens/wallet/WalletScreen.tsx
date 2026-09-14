@@ -65,88 +65,85 @@ export const WalletScreen: React.FC = () => {
         </View>
 
         {recentTransactions.length > 0 ? (
-          recentTransactions.map((tx) => (
-            <View key={tx.id} style={[styles.transactionItem, {backgroundColor: colors.card}]}>
-              <View style={styles.txLeft}>
-                <View
-                  style={[
-                    styles.txIcon,
-                    {
-                      backgroundColor:
-                        tx.type === 'received' || tx.type === 'deposit' || tx.type === 'refund'
+          recentTransactions.map((tx) => {
+            const isIncoming = tx.type === 'receive' || tx.type === 'transfer' || tx.type === 'refund';
+            const isOutgoing = tx.type === 'send' || tx.type === 'fee';
+            return (
+              <View key={tx.id} style={[styles.transactionItem, {backgroundColor: colors.card}]}>
+                <View style={styles.txLeft}>
+                  <View
+                    style={[
+                      styles.txIcon,
+                      {
+                        backgroundColor: isIncoming
                           ? colors.successLight
                           : colors.errorLight,
-                    },
-                  ]}>
-                  <Icon
-                    name={tx.type === 'received' || tx.type === 'deposit' ? 'money' : 'sendMoney'}
-                    size={18}
-                    color={
-                      tx.type === 'received' || tx.type === 'deposit' || tx.type === 'refund'
-                        ? colors.success
-                        : colors.error
-                    }
-                  />
-                </View>
-                <View style={styles.txContent}>
-                  <Text style={styles.txType}>
-                    {tx.type === 'sent' && 'إرسال'}
-                    {tx.type === 'received' && 'استلام'}
-                    {tx.type === 'transfer' && 'تحويل'}
-                    {tx.type === 'payment' && 'دفع'}
-                    {tx.type === 'refund' && 'استرداد'}
-                    {tx.type === 'withdrawal' && 'سحب'}
-                    {tx.type === 'deposit' && 'إيداع'}
-                  </Text>
-                  <Text style={styles.txDescription} numberOfLines={1}>
-                    {tx.description}
-                  </Text>
-                </View>
-              </View>
-              <View style={styles.txRight}>
-                <Text
-                  style={[
-                    styles.txAmount,
-                    {color: tx.type === 'sent' || tx.type === 'withdrawal' ? colors.error : colors.success},
-                  ]}>
-                  {tx.amount < 0 ? '-' : '+'}
-                  {Math.abs(tx.amount).toLocaleString('ar-DZ')} دج
-                </Text>
-                <Text style={styles.txDate}>{formatDateAlgerian(tx.createdAt)}</Text>
-                <View
-                  style={[
-                    styles.txStatusBadge,
-                    {
-                      backgroundColor:
-                        tx.status === 'completed'
-                          ? colors.successLight
-                          : tx.status === 'pending'
-                          ? colors.warningLight
-                          : tx.status === 'failed'
-                          ? colors.errorLight
-                          : colors.infoLight,
-                    },
-                  ]}>
-                  <Text
-                    style={[
-                      styles.txStatusText,
-                      {
-                        color:
-                          tx.status === 'completed'
-                            ? colors.success
-                            : tx.status === 'pending'
-                            ? colors.warning
-                            : tx.status === 'failed'
-                            ? colors.error
-                            : colors.info,
                       },
                     ]}>
-                    {tx.status === 'completed' ? 'مكتمل' : tx.status}
+                    <Icon
+                      name={isIncoming ? 'money' : 'sendMoney'}
+                      size={18}
+                      color={isIncoming ? colors.success : colors.error}
+                    />
+                  </View>
+                  <View style={styles.txContent}>
+                    <Text style={styles.txType}>
+                      {tx.type === 'send' && 'إرسال'}
+                      {tx.type === 'receive' && 'استلام'}
+                      {tx.type === 'transfer' && 'تحويل'}
+                      {tx.type === 'fee' && 'رسوم'}
+                      {tx.type === 'refund' && 'استرداد'}
+                    </Text>
+                    <Text style={styles.txDescription} numberOfLines={1}>
+                      {tx.description}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.txRight}>
+                  <Text
+                    style={[
+                      styles.txAmount,
+                      {color: isOutgoing ? colors.error : colors.success},
+                    ]}>
+                    {tx.amount < 0 ? '-' : '+'}
+                    {Math.abs(tx.amount).toLocaleString('ar-DZ')} دج
                   </Text>
+                  <Text style={styles.txDate}>{formatDateAlgerian(tx.createdAt)}</Text>
+                  <View
+                    style={[
+                      styles.txStatusBadge,
+                      {
+                        backgroundColor:
+                          tx.status === 'completed'
+                            ? colors.successLight
+                            : tx.status === 'pending'
+                            ? colors.warningLight
+                            : tx.status === 'failed'
+                            ? colors.errorLight
+                            : colors.infoLight,
+                      },
+                    ]}>
+                    <Text
+                      style={[
+                        styles.txStatusText,
+                        {
+                          color:
+                            tx.status === 'completed'
+                              ? colors.success
+                              : tx.status === 'pending'
+                              ? colors.warning
+                              : tx.status === 'failed'
+                              ? colors.error
+                              : colors.info,
+                        },
+                      ]}>
+                      {tx.status === 'completed' ? 'مكتمل' : tx.status}
+                    </Text>
+                  </View>
                 </View>
               </View>
-            </View>
-          ))
+            );
+          })
         ) : (
           <View style={styles.emptyState}>
             <Icon name="money" size={48} color={colors.textTertiary} />
