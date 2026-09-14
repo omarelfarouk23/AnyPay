@@ -1,4 +1,4 @@
-name: Anypay CI
+name: Anypay CI/CD
 
 on:
   push:
@@ -6,22 +6,26 @@ on:
   pull_request:
     branches: [master, main, develop]
 
+env:
+  NODE_VERSION: '20'
+  EXPO_CLI_VERSION: '>= 10.0.0'
+
 jobs:
   quality:
-    name: TypeScript & Test Gates
+    name: TypeScript & Expo Doctor & Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: npm
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
 
-      - name: TypeScript编译 (noEmit)
+      - name: TypeScript Check (noEmit)
         run: npx tsc --noEmit
 
       - name: Expo Doctor
@@ -31,7 +35,7 @@ jobs:
         run: npm test
 
   eas-preview:
-    name: EAS Preview Build (Android)
+    name: EAS Preview Build (PRs only)
     runs-on: ubuntu-latest
     needs: quality
     if: github.event_name == 'pull_request'
@@ -40,17 +44,76 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: npm
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
 
-      - name: EAS Build (Preview)
+      - name: EAS Build (Preview - Android APK)
         uses: expo/eas-build-action@v3
         with:
           eas-config: eas.json
           profile: preview
           platform: android
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+  eas-development:
+    name: EAS Development Build (push to dev branches)
+    runs-on: ubuntu-latest
+    needs: quality
+    if: github.ref == 'refs/heads/develop'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: EAS Build (Development - Android APK)
+        uses: expo/eas-build-action@v3
+        with:
+          eas-config: eas.json
+          profile: development
+          platform: android
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+  eas-production:
+    name: EAS Production Build (push to master/main)
+    runs-on: ubuntu-latest
+    needs: quality
+    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: EAS Build (Production - Android App Bundle)
+        uses: expo/eas-build-action@v3
+        with:
+          eas-config: eas.json
+          profile: production
+          platform: android
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: EAS Build (Production - iOS)
+        uses: expo/eas-build-action@v3
+        with:
+          eas-config: eas.json
+          profile: production
+          platform: ios
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
