@@ -1,5 +1,5 @@
 // src/screens/auth/LoginScreen.tsx
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet,
   KeyboardAvoidingView, Platform, SafeAreaView,
@@ -12,6 +12,13 @@ import { Avatar } from '../../components/ui/Avatar';
 import { colors, spacing, borderRadius, shadows, typography } from '../../config/theme';
 import { validatePhoneNumber } from '../../utils/validators';
 import { useAuthStore } from '../../store';
+import { apiClient } from '../../services/api/client';
+
+function generateOtp(): string {
+  const array = new Uint32Array(1);
+  crypto.getRandomValues(array);
+  return (array[0] % 900000 + 100000).toString();
+}
 
 export const LoginScreen: React.FC = () => {
   const navigation = useNavigation<any>();
@@ -37,12 +44,19 @@ export const LoginScreen: React.FC = () => {
 
     setLoading(true);
     try {
-      otpRef.current = Math.floor(100000 + Math.random() * 900000).toString();
+      const res = await apiClient.post('/auth/otp/send', { phoneNumber: cleaned });
+      const data = res.data;
+      if (!data.success) {
+        setError(data.message ?? 'فشل إرسال الرمز.');
+        Alert.alert('خطأ', data.message ?? 'حاول مرة أخرى.');
+        return;
+      }
+      otpRef.current = generateOtp();
       setStep('otp');
       setOtpSent(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'فشل إرسال الرمز.');
-      Alert.alert('خطأ', err instanceof Error ? err.message : 'حاول مرة أخرى.');
+    } catch {
+      setError('فشل إرسال الرمز.');
+      Alert.alert('خطأ', 'حاول مرة أخرى.');
     } finally {
       setLoading(false);
     }

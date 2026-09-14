@@ -34,14 +34,17 @@ export const handleApiError = (error: unknown): { message: string; code?: string
       return { message: (data as { message: string }).message };
     }
     if (axiosError.response) {
-      return { message: `خطأ خوادم (${axiosError.response.status})` };
+      return { message: `خطأ الخادم (${axiosError.response.status})` };
     }
     if (axiosError.request) {
-      return { message: 'لم نتمكن من الاتصال بالخادم، تحقق من الاتصال بالإنترنت.' };
+      return { message: 'لا يمكن الاتصال بالخادم، تحقق من الاتصال بالإنترنت.' };
     }
-    return { message: axiosError.message || 'خطأ غير معروف' };
+    return { message: axiosError.message || 'حدث خطأ غير متوقع' };
   }
-  return { message: 'خطأ غير متوقع' };
+  if (error instanceof Error) {
+    return { message: error.message };
+  }
+  return { message: 'حدث خطأ غير متوقع' };
 };
 
 export default apiClient;

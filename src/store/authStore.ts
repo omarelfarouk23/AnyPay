@@ -2,6 +2,7 @@ import {create} from 'zustand';
 import {persist, createJSONStorage} from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {AuthState, User, LoginCredentials, OtpResponse, LoginResponse} from '../types/user';
+import {apiClient} from '../services/api/client';
 
 interface AuthStore extends AuthState {
   setUser: (user: User | null) => void;
@@ -34,12 +35,8 @@ export const useAuthStore = create<AuthStore>()(
       loginWithCredentials: async (credentials) => {
         set({isLoading: true, error: null});
         try {
-          const res = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/auth/login`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(credentials),
-          });
-          const data: LoginResponse = await res.json();
+          const res = await apiClient.post<LoginResponse>('/auth/login', credentials);
+          const data = res.data;
           if (data.success) {
             set({
               user: data.user ?? null,
@@ -53,6 +50,7 @@ export const useAuthStore = create<AuthStore>()(
           }
           return data;
         } catch (err) {
+          const msg = err instanceof Error ? err.message : 'خطأ في الشبكة';
           set({error: 'خطأ في الشبكة'});
           return {success: false, message: 'خطأ في الشبكة'};
         } finally {
@@ -63,12 +61,8 @@ export const useAuthStore = create<AuthStore>()(
       sendOtp: async (phoneNumber) => {
         set({isLoading: true, error: null});
         try {
-          const res = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/auth/otp/send`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({phoneNumber}),
-          });
-          const data: OtpResponse = await res.json();
+          const res = await apiClient.post<OtpResponse>('/auth/otp/send', {phoneNumber});
+          const data = res.data;
           if (!data.success) {
             set({error: data.message ?? 'فشل إرسال الكود'});
           }
@@ -84,12 +78,8 @@ export const useAuthStore = create<AuthStore>()(
       verifyOtp: async (phoneNumber, otp) => {
         set({isLoading: true, error: null});
         try {
-          const res = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/auth/otp/verify`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({phoneNumber, otp}),
-          });
-          const data: LoginResponse = await res.json();
+          const res = await apiClient.post<LoginResponse>('/auth/otp/verify', {phoneNumber, otp});
+          const data = res.data;
           if (data.success) {
             set({
               user: data.user ?? null,
@@ -113,10 +103,7 @@ export const useAuthStore = create<AuthStore>()(
       logout: async () => {
         set({isLoading: true});
         try {
-          await fetch(`${process.env.EXPO_PUBLIC_API_URL}/auth/logout`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-          });
+          await apiClient.post('/auth/logout');
         } catch {
           // ignore
         } finally {

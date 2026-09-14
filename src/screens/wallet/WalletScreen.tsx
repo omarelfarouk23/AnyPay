@@ -8,13 +8,11 @@ import {Icon} from '../../components/ui/Icon';
 import {BalanceCard} from '../../components/wallet/BalanceCard';
 import {useWalletStore} from '../../store/walletStore';
 import {useAuthStore} from '../../store/authStore';
-import {useTheme} from '../../hooks/useTheme';
 import {formatDateAlgerian} from '../../utils/formatters';
 
 export const WalletScreen: React.FC = () => {
   const {wallet, transactions, isLoading} = useWalletStore();
   const {user} = useAuthStore();
-  const {colors: themeColors} = useTheme();
 
   const recentTransactions = transactions.slice(0, 5);
 
@@ -52,7 +50,7 @@ export const WalletScreen: React.FC = () => {
 
         <BalanceCard
           balance={wallet?.balance ?? 0}
-          currency="DA"
+          currency={wallet?.currency ?? 'د.ج'}
           walletLabel={user ? `${user.fullName} — المحفظة الرئيسية` : 'محفظة رئيسية'}
           onSend={() => {}}
           size="large"

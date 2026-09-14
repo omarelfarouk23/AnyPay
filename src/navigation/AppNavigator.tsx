@@ -15,7 +15,6 @@ import {ProfileScreen} from '../screens/profile/ProfileScreen';
 import {SettingsScreen} from '../screens/profile/SettingsScreen';
 import {CustomerSupportScreen} from '../screens/customer/CustomerSupportScreen';
 import {FAQScreen} from '../screens/customer/FAQScreen';
-import {useTheme} from '../hooks/useTheme';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -34,13 +33,12 @@ const TabIcon: React.FC<{name: string; focused: boolean; color: string}> = ({nam
 };
 
 const TabNavigator = () => {
-  const {colors: themeColors} = useTheme();
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: themeColors.card,
+          backgroundColor: colors.card,
           borderTopColor: colors.border,
           borderTopWidth: 1,
           paddingBottom: 5,
@@ -85,7 +83,6 @@ const TabNavigator = () => {
 
 export const AppNavigator: React.FC = () => {
   const {isAuthenticated} = useAuthStore();
-  const {colors: themeColors} = useTheme();
 
   return (
     <NavigationContainer>
@@ -95,21 +92,9 @@ export const AppNavigator: React.FC = () => {
           contentStyle: {backgroundColor: colors.background},
         }}>
         {!isAuthenticated ? (
-          <Stack.Screen name="Auth">
-            {() => (
-              <View style={{flex: 1, backgroundColor: colors.primary}}>
-                <AuthScreen />
-              </View>
-            )}
-          </Stack.Screen>
+          <Stack.Screen name="Auth" component={AuthScreen} />
         ) : (
-          <Stack.Screen name="Main">
-            {() => (
-              <View style={{flex: 1}}>
-                <TabNavigator />
-              </View>
-            )}
-          </Stack.Screen>
+          <Stack.Screen name="Main" component={TabNavigator} />
         )}
       </Stack.Navigator>
     </NavigationContainer>
