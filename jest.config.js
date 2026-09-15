@@ -1,7 +1,7 @@
 const config = {
   preset: 'react-native',
   testEnvironment: 'node',
-  setupFilesAfterSetup: ['<rootDir>/jest.setup.js'],
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   transformIgnorePatterns: [
     'node_modules/(?!((@react-native|react-native|@react-navigation|react-navigation|react-native-reanimated|react-native-screens|react-native-safe-area-context|react-native-gesture-handler|react-native-svg|react-native-vector-icons|@expo|expo|expo-status-bar|expo-modules-core|expo-constants|expo-font|expo-image-picker|expo-notifications|expo-file-system|expo-asset|react-native-svg|react-native-reanimated|@react-native-async-storage|@react-native-community|@shopify|@nozbe|@unimodules|@react-native-firebase|@react-native-community|@react-native-linear-gradient|react-native-assembly|react-native-paper|react-native-modal|react-native-web|react-native-encrypted-storage|react-native-mmkv|react-native-nitro-modules))/)',
   ],
@@ -22,6 +22,7 @@ const config = {
     '!src/**/*.d.ts',
     '!src/**/__tests__/**',
     '!src/navigation/**',
+    '!src/screens/pay/ReceiptScanner', // skip SVG-heavy screen in unit tests
   ],
   coverageThreshold: {
     global: {

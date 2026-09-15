@@ -1,34 +1,58 @@
 // src/screens/chat/NewChatScreen.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, SafeAreaView, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import type {RootStackParamList} from '../../navigation/AppNavigator';
 import { Button } from '../../components/ui/Button';
 import { Avatar } from '../../components/ui/Avatar';
 import { colors, spacing, borderRadius, typography } from '../../config/theme';
 import { validatePhoneNumber } from '../../utils/validators';
+import { userService } from '../../services/api/user';
+
+const MOCK_CONTACTS = [
+  { id: 'c1', name: 'أحمد عبد الله', phone: '0555123456' },
+  { id: 'c2', name: 'سارة السعود', phone: '0555234567' },
+  { id: 'c3', name: 'عبد الرحمن محمد', phone: '0555345678' },
+  { id: 'c4', name: 'فاطمة بنت شورى', phone: '0555456789' },
+  { id: 'c5', name: 'خالد فاروق', phone: '0555567890' },
+];
 
 export const NewChatScreen: React.FC = () => {
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedContact, setSelectedContact] = useState<string | null>(null);
+  const [contacts, setContacts] = useState<{id: string; name: string; phone: string}[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const loadContacts = useCallback(async () => {
+    try {
+      const data = await userService.getContacts();
+      setContacts(data.map(u => ({ id: u.id, name: u.fullName, phone: u.phoneNumber || '' })));
+    } catch {
+      setContacts([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadContacts();
+  }, []);
 
   const handleStartChat = () => {
     if (!selectedContact) {
       Alert.alert('اختر جهة اتصال', 'يرجى اختيار جهة للبدء بالمحادثة.');
       return;
     }
-    navigation.navigate('ChatDetail', { conversationId: `new_${selectedContact}` });
+    const contact = contacts.find(c => c.id === selectedContact);
+    navigation.navigate('Chat', {
+      conversationId: `new_${selectedContact}`,
+      conversationTitle: contact?.name ?? 'محادثة جديدة',
+    });
   };
 
-  const mockContacts = [
-    { id: 'c1', name: 'أحمد عبد الله', phone: '0555123456' },
-    { id: 'c2', name: 'سارة السعود', phone: '0555234567' },
-    { id: 'c3', name: 'عبد الرحمن محمد', phone: '0555345678' },
-    { id: 'c4', name: 'فاطمة بنت شورى', phone: '0555456789' },
-    { id: 'c5', name: 'خالد فاروق', phone: '0555567890' },
-  ];
-
-  const filteredContacts = mockContacts.filter((c) =>
+  const filteredContacts = contacts.filter((c) =>
     c.name.includes(searchQuery) || c.phone.includes(searchQuery)
   );
 
@@ -57,25 +81,33 @@ export const NewChatScreen: React.FC = () => {
       </View>
 
       <View style={styles.list}>
-        {filteredContacts.map((contact) => (
-          <TouchableOpacity
-            key={contact.id}
-            style={styles.contactItem}
-            onPress={() => setSelectedContact(contact.id)}
-            activeOpacity={0.7}
-          >
-            <Avatar name={contact.name} size={48} />
-            <View style={styles.contactInfo}>
-              <Text style={styles.contactName}>{contact.name}</Text>
-              <Text style={styles.contactPhone}>{contact.phone}</Text>
-            </View>
-            {selectedContact === contact.id && (
-              <View style={styles.checkmark}>
-                <Text style={styles.checkmarkText}>✓</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        ))}
+        {loading ? (
+          <Text style={styles.loadingText}>جاري تحميل جهات الاتصال...</Text>
+        ) : filteredContacts.length === 0 ? (
+          <Text style={styles.emptyText}>لا توجد جهات اتصال</Text>
+        ) : (
+          filteredContacts.map((contact) => {
+            return (
+              <TouchableOpacity
+                key={contact.id}
+                style={styles.contactItem}
+                onPress={() => setSelectedContact(contact.id)}
+                activeOpacity={0.7}
+              >
+                <Avatar name={contact.name} size={48} />
+                <View style={styles.contactInfo}>
+                  <Text style={styles.contactName}>{contact.name}</Text>
+                  <Text style={styles.contactPhone}>{contact.phone}</Text>
+                </View>
+                {selectedContact === contact.id && (
+                  <View style={styles.checkmark}>
+                    <Text style={styles.checkmarkText}>✓</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })
+        )}
       </View>
 
       <View style={styles.footer}>
@@ -119,4 +151,6 @@ const styles = StyleSheet.create({
   },
   checkmarkText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
   footer: { padding: spacing.lg, backgroundColor: colors.card, borderTopWidth: 1, borderTopColor: colors.divider },
+  loadingText: { color: colors.textSecondary, textAlign: 'center', marginTop: spacing.lg },
+  emptyText: { color: colors.textSecondary, textAlign: 'center', marginTop: spacing.lg },
 });

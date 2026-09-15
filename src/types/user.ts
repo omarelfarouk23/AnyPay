@@ -40,3 +40,16 @@ export interface LoginResponse {
   refreshToken?: string;
   message?: string;
 }
+
+export type RootStackParamList = {
+  Auth: undefined;
+  Main: undefined;
+  Chat: {conversationId: string; conversationTitle: string};
+  PayTabs: undefined;
+  Scanner: undefined;
+  ReceiveQR: {presetAmount?: number};
+  PaymentConfirm: {merchantId: string; merchantName: string; amount: number; ccpId?: string};
+  PaymentSuccess: {reference: string; amount: number; merchantName: string; balanceAfter: number; rewardPoints?: number};
+  SendMoney: undefined;
+  TransactionHistory: undefined;
+};

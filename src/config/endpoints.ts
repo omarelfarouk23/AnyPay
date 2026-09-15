@@ -1,4 +1,15 @@
-export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000/api';
+// SECURITY: Default to HTTPS to protect auth tokens and user data in transit.
+// In development, set EXPO_PUBLIC_API_URL=http://localhost:3000/api in .env
+// (only allowed in non-production environments).
+const rawUrl = process.env.EXPO_PUBLIC_API_URL;
+const isDev = process.env.EXPO_PUBLIC_ENVIRONMENT === 'development';
+
+// Validate: production must use HTTPS. Warn in dev if using HTTP.
+if (!isDev && rawUrl && rawUrl.startsWith('http://')) {
+  console.warn('[Security] Production API URL must use HTTPS. Current:', rawUrl);
+}
+
+export const API_BASE_URL = rawUrl ?? 'https://api.anypay.dz/v1';
 
 export const API_ENDPOINTS = {
   // Auth
@@ -45,6 +56,8 @@ export const API_ENDPOINTS = {
   PAYMENTS_INITIATE: '/payments/initiate',
   PAYMENTS_STATUS: '/payments/:paymentId/status',
   PAYMENTS_WEBHOOK: '/payments/webhook',
+  PAYMENTS_QR_RESOLVE: '/payments/qr/resolve',
+  PAYMENTS_RECEIVE_QR: '/payments/qr/receive',
 
   // Notifications
   NOTIFICATIONS_LIST: '/notifications',
@@ -53,6 +66,12 @@ export const API_ENDPOINTS = {
   // Uploads
   UPLOAD_IMAGE: '/upload/image',
   UPLOAD_FILE: '/upload/file',
+
+  // Search
+  USERS_SEARCH: '/users/search',
+  USERS_CONTACTS: '/users/contacts',
 } as const;
 
 export type ApiEndpoint = (typeof API_ENDPOINTS)[keyof typeof API_ENDPOINTS];
+
+// Add these endpoints to the existing API_ENDPOINTS object

@@ -1,5 +1,6 @@
-import React from 'react';
-import {View, Text, StyleSheet, ScrollView, TouchableOpacity} from 'react-native';
+import React, {useCallback} from 'react';
+import {View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert} from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {colors} from '../../config/colors';
 import {borderRadius, spacing, typography, shadows} from '../../config/theme';
@@ -12,10 +13,34 @@ import {Badge} from '../../components/ui/Badge';
 import {useAuthStore} from '../../store/authStore';
 import {useTheme} from '../../hooks/useTheme';
 import {formatDateAlgerian} from '../../utils/formatters';
+import {useNavigation} from '@react-navigation/native';
+import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import type {RootStackParamList} from '../../navigation/AppNavigator';
+import {userService} from '../../services/api/user';
 
 export const ProfileScreen: React.FC = () => {
   const {user, logout} = useAuthStore();
   const {colors: themeColors} = useTheme();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
+  const handlePickAvatar = useCallback(async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 0.8,
+        aspect: [1, 1],
+      });
+      if (!result.canceled && result.assets?.[0]) {
+        const asset = result.assets[0];
+        await userService.updateProfile({avatarUrl: asset.uri ?? ''});
+        Alert.alert('نجاح', 'تم تحديث الصورة الشخصية');
+      }
+    } catch (err) {
+      console.error('[ProfileScreen] Failed to pick avatar:', err);
+      Alert.alert('خطأ', 'تعذّر تحديث الصورة');
+    }
+  }, []);
 
   const handleLogout = async () => {
     await logout();
@@ -26,7 +51,7 @@ export const ProfileScreen: React.FC = () => {
       <Header
         title="الملف الشخصي"
         rightIcon={<Icon name="settings" size={20} color={colors.textOnPrimary} />}
-        rightAction={() => {}}
+        rightAction={() => navigation.navigate('Settings')}
         backgroundColor={colors.primary}
         tintColor={colors.textOnPrimary}
       />
@@ -37,6 +62,7 @@ export const ProfileScreen: React.FC = () => {
             name={user?.fullName ?? 'مستخدم'}
             size={80}
             showOnline={false}
+            onPress={handlePickAvatar}
           />
           <Text style={styles.profileName} numberOfLines={1}>
             {user?.fullName ?? 'غير محدد'}
@@ -74,20 +100,20 @@ export const ProfileScreen: React.FC = () => {
 
         <Card style={styles.card}>
           <Text style={styles.cardTitle}>الإعدادات</Text>
-          <TouchableOpacity style={styles.settingRow}>
+          <TouchableOpacity style={styles.settingRow} onPress={() => navigation.navigate('Settings')}>
             <Icon name="bell" size={20} color={colors.textSecondary} />
             <Text style={styles.settingLabel}>إشعارات</Text>
             <Icon name="chevronRight" size={18} color={colors.textTertiary} />
           </TouchableOpacity>
           <View style={[styles.divider, {backgroundColor: colors.borderLight}]} />
-          <TouchableOpacity style={styles.settingRow}>
+          <TouchableOpacity style={styles.settingRow} onPress={() => {}}>
             <Icon name="globe" size={20} color={colors.textSecondary} />
             <Text style={styles.settingLabel}>اللغة</Text>
             <Text style={styles.settingValue}>العربية</Text>
             <Icon name="chevronRight" size={18} color={colors.textTertiary} />
           </TouchableOpacity>
           <View style={[styles.divider, {backgroundColor: colors.borderLight}]} />
-          <TouchableOpacity style={styles.settingRow}>
+          <TouchableOpacity style={styles.settingRow} onPress={() => navigation.navigate('Settings')}>
             <Icon name="shield" size={20} color={colors.textSecondary} />
             <Text style={styles.settingLabel}>الخصوصية والأمان</Text>
             <Icon name="chevronRight" size={18} color={colors.textTertiary} />
@@ -96,19 +122,19 @@ export const ProfileScreen: React.FC = () => {
 
         <Card style={styles.card}>
           <Text style={styles.cardTitle}>الدعم</Text>
-          <TouchableOpacity style={styles.settingRow}>
+          <TouchableOpacity style={styles.settingRow} onPress={() => navigation.navigate('CustomerSupport')}>
             <Icon name="support" size={20} color={colors.textSecondary} />
             <Text style={styles.settingLabel}>خدمة العملاء</Text>
             <Icon name="chevronRight" size={18} color={colors.textTertiary} />
           </TouchableOpacity>
           <View style={[styles.divider, {backgroundColor: colors.borderLight}]} />
-          <TouchableOpacity style={styles.settingRow}>
+          <TouchableOpacity style={styles.settingRow} onPress={() => navigation.navigate('FAQ')}>
             <Icon name="question" size={20} color={colors.textSecondary} />
             <Text style={styles.settingLabel}>الأسئلة الشائعة</Text>
             <Icon name="chevronRight" size={18} color={colors.textTertiary} />
           </TouchableOpacity>
           <View style={[styles.divider, {backgroundColor: colors.borderLight}]} />
-          <TouchableOpacity style={styles.settingRow}>
+          <TouchableOpacity style={styles.settingRow} onPress={() => {}}>
             <Icon name="star" size={20} color={colors.textSecondary} />
             <Text style={styles.settingLabel}>تقييم التطبيق</Text>
             <Icon name="chevronRight" size={18} color={colors.textTertiary} />

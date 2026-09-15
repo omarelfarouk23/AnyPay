@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Switch,
+  View, Text, StyleSheet, TouchableOpacity, Switch, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../../config/colors';
@@ -9,16 +9,32 @@ import { Header } from '../../components/ui/Header';
 import { Icon } from '../../components/ui/Icon';
 import { Card } from '../../components/ui/Card';
 import { useThemeStore } from '../../store/themeStore';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../../navigation/AppNavigator';
+import { userService } from '../../services/api/user';
+import { useAuthStore } from '../../store/authStore';
 
 export const SettingsScreen: React.FC = () => {
   const { mode, setMode } = useThemeStore();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { token } = useAuthStore();
+
+  const handleUpdateSetting = async (setting: string, value: boolean) => {
+    try {
+      await userService.updateSettings({ [setting]: value });
+    } catch (err) {
+      console.error('[SettingsScreen] Failed to update setting:', err);
+      Alert.alert('خطأ', 'تعذّر تحديث الإعداد');
+    }
+  };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <Header
         title="الإعدادات"
         leftIcon={<Text style={styles.backText}>←</Text>}
-        leftAction={() => {}}
+        leftAction={() => navigation.goBack()}
         backgroundColor={colors.primary}
         tintColor={colors.textOnPrimary}
       />
@@ -57,13 +73,13 @@ export const SettingsScreen: React.FC = () => {
 
         <Card style={styles.card}>
           <Text style={styles.cardTitle}>التنبيهات</Text>
-          <TouchableOpacity style={styles.settingRow}>
+          <TouchableOpacity style={styles.settingRow} onPress={() => handleUpdateSetting('notifications', true)}>
             <Icon name="bell" size={20} color={colors.textSecondary} />
             <Text style={styles.settingLabel}>إشعارات المحادثات</Text>
             <Icon name="chevronRight" size={18} color={colors.textTertiary} />
           </TouchableOpacity>
           <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
-          <TouchableOpacity style={styles.settingRow}>
+          <TouchableOpacity style={styles.settingRow} onPress={() => handleUpdateSetting('paymentNotifications', true)}>
             <Icon name="bell" size={20} color={colors.textSecondary} />
             <Text style={styles.settingLabel}>إشعارات الدفع</Text>
             <Icon name="chevronRight" size={18} color={colors.textTertiary} />
@@ -71,23 +87,29 @@ export const SettingsScreen: React.FC = () => {
         </Card>
 
         <Card style={styles.card}>
-          <Text style={styles.cardTitle}>الخصوصية</Text>
-          <TouchableOpacity style={styles.settingRow}>
-            <Icon name="lock" size={20} color={colors.textSecondary} />
-            <Text style={styles.settingLabel}>كلمة مرور التأكيد</Text>
-            <Icon name="chevronRight" size={18} color={colors.textTertiary} />
-          </TouchableOpacity>
-          <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
-          <TouchableOpacity style={styles.settingRow}>
-            <Icon name="shield" size={20} color={colors.textSecondary} />
-            <Text style={styles.settingLabel}>محاكاة الوجه</Text>
-            <Icon name="chevronRight" size={18} color={colors.textTertiary} />
-          </TouchableOpacity>
-        </Card>
+                  <Text style={styles.cardTitle}>الخصوصية والأمان</Text>
+                  <TouchableOpacity style={styles.settingRow} onPress={() => navigation.navigate('Profile')}>
+                    <Icon name="lock" size={20} color={colors.textSecondary} />
+                    <Text style={styles.settingLabel}>كلمة مرور التأكيد</Text>
+                    <Icon name="chevronRight" size={18} color={colors.textTertiary} />
+                  </TouchableOpacity>
+                  <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
+                  <TouchableOpacity style={styles.settingRow} onPress={() => navigation.navigate('Profile')}>
+                    <Icon name="shield" size={20} color={colors.textSecondary} />
+                    <Text style={styles.settingLabel}>محاكاة الوجه</Text>
+                    <Icon name="chevronRight" size={18} color={colors.textTertiary} />
+                  </TouchableOpacity>
+                  <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
+                  <TouchableOpacity style={styles.settingRow} onPress={() => navigation.navigate('BiometricSettings')}>
+                    <Icon name="fingerprint" size={20} color={colors.textSecondary} />
+                    <Text style={styles.settingLabel}>المصادقة الحيوية</Text>
+                    <Icon name="chevronRight" size={18} color={colors.textTertiary} />
+                  </TouchableOpacity>
+                </Card>
 
         <Card style={styles.card}>
           <Text style={styles.cardTitle}>منطقة التجربة</Text>
-          <TouchableOpacity style={styles.settingRow}>
+          <TouchableOpacity style={styles.settingRow} onPress={() => navigation.navigate('Profile')}>
             <Icon name="flask" size={20} color={colors.textSecondary} />
             <Text style={styles.settingLabel}>وضع المطوّر</Text>
             <Icon name="chevronRight" size={18} color={colors.textTertiary} />

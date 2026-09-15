@@ -52,16 +52,19 @@ jest.mock('react-native-gesture-handler', () => ({
   State: { BEGAN: 'began', FAILED: 'failed', ACTIVE: 'active', END: 'end' },
 }));
 
-jest.mock('react-native-svg', () => ({
-  Svg: ({ children, ...props }) => React.createElement('svg', props, children),
-  Path: ({ d, ...props }) => React.createElement('path', props, d),
-  Circle: ({ cx, cy, r, ...props }) => React.createElement('circle', { cx, cy, r, ...props }),
-  Rect: ({ x, y, width, height, ...props }) => React.createElement('rect', { x, y, width, height, ...props }),
-  G: ({ children, ...props }) => React.createElement('g', props, children),
-  Defs: ({ children }) => React.createElement('defs', null, children),
-  LinearGradient: ({ id, children, ...props }) => React.createElement('linearGradient', { id, ...props }, children),
-  Stop: ({ offset, stopColor, ...props }) => React.createElement('stop', { offset, stopColor, ...props }),
-}));
+jest.mock('react-native-svg', () => {
+  const React = require('react');
+  return {
+    Svg: ({ children, ...props }) => React.createElement('svg', props, children),
+    Path: ({ d, ...props }) => React.createElement('path', props, d),
+    Circle: ({ cx, cy, r, ...props }) => React.createElement('circle', { cx, cy, r, ...props }),
+    Rect: ({ x, y, width, height, ...props }) => React.createElement('rect', { x, y, width, height, ...props }),
+    G: ({ children, ...props }) => React.createElement('g', props, children),
+    Defs: ({ children }) => React.createElement('defs', null, children),
+    LinearGradient: ({ id, children, ...props }) => React.createElement('linearGradient', { id, ...props }, children),
+    Stop: ({ offset, stopColor, ...props }) => React.createElement('stop', { offset, stopColor, ...props }),
+  };
+});
 
 jest.mock('@react-native-async-storage/async-storage', () => ({
   getItem: jest.fn(() => Promise.resolve(null)),

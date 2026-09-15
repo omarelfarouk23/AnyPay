@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useEffect, useCallback} from 'react';
 import {View, Text, StyleSheet, ScrollView, TouchableOpacity} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {colors} from '../../config/colors';
@@ -9,10 +9,48 @@ import {BalanceCard} from '../../components/wallet/BalanceCard';
 import {useWalletStore} from '../../store/walletStore';
 import {useAuthStore} from '../../store/authStore';
 import {formatDateAlgerian} from '../../utils/formatters';
+import type {RootStackParamList} from '../../navigation/AppNavigator';
+import {useNavigation} from '@react-navigation/native';
+import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import {walletService} from '../../services/api/wallet';
+import {qrPaymentService} from '../../services/api/payment';
+
+const ACTION_GRID = [
+  {icon: 'sendMoney' as const, label: 'إرسال', sub: 'إلى أرقام', screen: 'SendMoney'},
+  {icon: 'qrCodeScanner' as const, label: 'مسح رمز', sub: 'QR Code', screen: 'Scanner'},
+  {icon: 'qrCode2' as const, label: 'استلام', sub: 'رمز QR', screen: 'ReceiveQR'},
+  {icon: 'history' as const, label: 'سجل', sub: 'المعاملات', screen: 'TransactionHistory'},
+] as const;
 
 export const WalletScreen: React.FC = () => {
-  const {wallet, transactions, isLoading} = useWalletStore();
+  const navigation = useNavigation();
+  const stack = navigation.getParent();
+  const {wallet, transactions, isLoading, setLoading, setTransactions, setWallet} = useWalletStore();
   const {user} = useAuthStore();
+
+  const loadWalletData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [balanceData, txData] = await Promise.all([
+        walletService.getBalance(),
+        walletService.getTransactions(10),
+      ]);
+      setWallet({id: 'default', userId: user?.id ?? '', balance: balanceData.balance, totalBalance: balanceData.balance, currency: balanceData.currency, createdAt: '', updatedAt: ''});
+      setTransactions(txData);
+    } catch (err) {
+      console.error('[WalletScreen] Failed to load wallet:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [setLoading, setWallet, setTransactions, user?.id]);
+
+  const handleRefresh = useCallback(() => {
+    loadWalletData();
+  }, [loadWalletData]);
+
+  useEffect(() => {
+    loadWalletData();
+  }, []);
 
   const recentTransactions = transactions.slice(0, 5);
 
@@ -31,8 +69,8 @@ export const WalletScreen: React.FC = () => {
     <SafeAreaView style={[styles.container, {backgroundColor: colors.background}]}>
       <Header
         title="محفظتي"
-        rightIcon={<Icon name="settings" size={20} color={colors.textOnPrimary} />}
-        rightAction={() => {}}
+        rightIcon={<Icon name="refresh" size={20} color={colors.textOnPrimary} />}
+        rightAction={handleRefresh}
         backgroundColor={colors.primary}
         tintColor={colors.textOnPrimary}
       />
@@ -52,9 +90,38 @@ export const WalletScreen: React.FC = () => {
           balance={wallet?.balance ?? 0}
           currency={wallet?.currency ?? 'د.ج'}
           walletLabel={user ? `${user.fullName} — المحفظة الرئيسية` : 'محفظة رئيسية'}
-          onSend={() => {}}
           size="large"
         />
+
+        {/* Action grid (Stitch-inspired: Send / Scan QR / Receive QR / History) */}
+        <View style={styles.actionGridSection}>
+          <Text style={styles.sectionTitle}>سريع</Text>
+          <View style={styles.actionGrid}>
+            {ACTION_GRID.map((item) => (
+              <TouchableOpacity
+                key={item.label}
+                style={styles.actionButton}
+                onPress={() => {
+                  if (!stack) return;
+                  if (item.screen === 'SendMoney') {
+                    stack.navigate('PayTabs', {screen: 'SendMoney'} as never);
+                  } else if (item.screen === 'Scanner') {
+                    stack.navigate('PayTabs', {screen: 'Scanner'} as never);
+                  } else if (item.screen === 'ReceiveQR') {
+                    stack.navigate('PayTabs', {screen: 'ReceiveQR'} as never);
+                  } else if (item.screen === 'TransactionHistory') {
+                    stack.navigate('PayTabs', {screen: 'TransactionHistory'} as never);
+                  }
+                }}>
+                <View style={styles.actionIcon}>
+                  <Icon name={item.icon} size={22} color={colors.primary} />
+                </View>
+                <Text style={styles.actionLabel}>{item.label}</Text>
+                <Text style={styles.actionSub}>{item.sub}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>المعاملات الأخيرة</Text>
@@ -191,6 +258,51 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: spacing.xs,
   },
+  actionGridSection: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+  },
+  sectionTitle: {
+    fontSize: typography.sm,
+    fontWeight: typography.weights.semibold,
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: spacing.sm,
+  },
+  actionGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  actionButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.lg,
+    paddingVertical: spacing.md,
+    marginHorizontal: spacing.xs,
+    ...shadows.sm,
+  },
+  actionIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.primaryAlpha,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.xs,
+  },
+  actionLabel: {
+    fontSize: typography.sm,
+    fontWeight: typography.weights.semibold,
+    color: colors.primary,
+    marginBottom: spacing.xs,
+  },
+  actionSub: {
+    fontSize: typography.xs,
+    color: colors.textTertiary,
+  },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -198,11 +310,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.xl,
     paddingBottom: spacing.md,
-  },
-  sectionTitle: {
-    fontSize: typography.md,
-    fontWeight: typography.weights.semibold,
-    color: colors.textPrimary,
   },
   viewAllButton: {
     flexDirection: 'row',

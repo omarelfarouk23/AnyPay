@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, Text, StyleSheet, ViewStyle} from 'react-native';
+import {View, Text, StyleSheet, ViewStyle, TouchableOpacity} from 'react-native';
 import {colors} from '../../config/colors';
 import {borderRadius, spacing, typography} from '../../config/theme';
 import {Icon} from './Icon';
@@ -15,6 +15,7 @@ export interface AvatarProps {
   online?: boolean;
   children?: React.ReactNode;
   style?: ViewStyle;
+  onPress?: () => void;
 }
 
 const initialLetter = (name: string) => {
@@ -46,6 +47,7 @@ export const Avatar: React.FC<AvatarProps> = ({
   online = false,
   children,
   style,
+  onPress,
 }) => {
   const bgColor = backgroundColor ?? (name ? getColorFromString(name) : colors.primary);
   const diameter = Math.max(size, 24);
@@ -96,7 +98,7 @@ export const Avatar: React.FC<AvatarProps> = ({
   };
 
   return (
-    <View style={[styles.container, style]}>
+    <TouchableOpacity onPress={onPress} style={[styles.container, style]} activeOpacity={0.7}>
       <View style={[styles.avatarInner, {marginRight: showOnline ? -spacing.sm * 0.6 : 0}]}>
         {renderImage() ?? renderFallback()}
       </View>
@@ -116,7 +118,7 @@ export const Avatar: React.FC<AvatarProps> = ({
         />
       )}
       {children && <View style={styles.childrenContainer}>{children}</View>}
-    </View>
+    </TouchableOpacity>
   );
 };
 

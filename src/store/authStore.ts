@@ -2,7 +2,7 @@ import {create} from 'zustand';
 import {persist, createJSONStorage} from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {AuthState, User, LoginCredentials, OtpResponse, LoginResponse} from '../types/user';
-import {apiClient} from '../services/api/client';
+import {apiClient, setAuthToken} from '../services/api/client';
 
 interface AuthStore extends AuthState {
   setUser: (user: User | null) => void;
@@ -14,6 +14,7 @@ interface AuthStore extends AuthState {
   verifyOtp: (phoneNumber: string, otp: string) => Promise<LoginResponse>;
   logout: () => Promise<void>;
   clearAuth: () => void;
+  checkAuth: () => Promise<boolean>;
 }
 
 export const useAuthStore = create<AuthStore>()(
@@ -26,75 +27,95 @@ export const useAuthStore = create<AuthStore>()(
       isLoading: false,
       error: null,
 
-      setUser: (user) => set({user}),
-      setTokens: (token, refreshToken) =>
-        set({token, refreshToken, isAuthenticated: !!token}),
-      setLoading: (isLoading) => set({isLoading}),
-      setError: (error) => set({error}),
+      setUser: (user: User | null) =>
+        set({
+          user,
+          isAuthenticated: user !== null,
+        }),
 
-      loginWithCredentials: async (credentials) => {
+      setTokens: (token: string | null, refreshToken: string | null) =>
+        set({token, refreshToken, isAuthenticated: !!token}),
+
+      setLoading: (loading: boolean) => set({isLoading: loading}),
+
+      setError: (error: string | null) => set({error}),
+
+      loginWithCredentials: async (credentials: LoginCredentials) => {
         set({isLoading: true, error: null});
         try {
           const res = await apiClient.post<LoginResponse>('/auth/login', credentials);
           const data = res.data;
-          if (data.success) {
+          if (data.success && data.user && data.token) {
+            // SECURITY: Sync token with API client immediately so subsequent
+            // requests in this session include the Authorization header.
+            setAuthToken(data.token);
             set({
-              user: data.user ?? null,
-              token: data.token ?? null,
+              user: data.user,
+              token: data.token,
               refreshToken: data.refreshToken ?? null,
               isAuthenticated: true,
               error: null,
             });
+            return data;
           } else {
             set({error: data.message ?? 'فشل تسجيل الدخول'});
+            throw new Error(data.message ?? 'فشل تسجيل الدخول');
           }
-          return data;
         } catch (err) {
           const msg = err instanceof Error ? err.message : 'خطأ في الشبكة';
-          set({error: 'خطأ في الشبكة'});
-          return {success: false, message: 'خطأ في الشبكة'};
+          set({error: msg});
+          throw err;
         } finally {
           set({isLoading: false});
         }
       },
 
-      sendOtp: async (phoneNumber) => {
+      sendOtp: async (phoneNumber: string) => {
         set({isLoading: true, error: null});
         try {
           const res = await apiClient.post<OtpResponse>('/auth/otp/send', {phoneNumber});
           const data = res.data;
           if (!data.success) {
-            set({error: data.message ?? 'فشل إرسال الكود'});
+            const msg = data.message ?? 'فشل إرسال الرمز';
+            set({error: msg});
+            throw new Error(msg);
           }
+          set({error: null});
           return data;
-        } catch {
-          set({error: 'خطأ في الشبكة'});
-          return {success: false, message: 'خطأ في الشبكة'};
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : 'خطأ في الشبكة';
+          set({error: msg});
+          throw err;
         } finally {
           set({isLoading: false});
         }
       },
 
-      verifyOtp: async (phoneNumber, otp) => {
+      verifyOtp: async (phoneNumber: string, otp: string) => {
         set({isLoading: true, error: null});
         try {
           const res = await apiClient.post<LoginResponse>('/auth/otp/verify', {phoneNumber, otp});
           const data = res.data;
-          if (data.success) {
+          if (data.success && data.user && data.token) {
+            // SECURITY: Sync token with API client immediately
+            setAuthToken(data.token);
             set({
-              user: data.user ?? null,
-              token: data.token ?? null,
+              user: data.user,
+              token: data.token,
               refreshToken: data.refreshToken ?? null,
               isAuthenticated: true,
               error: null,
             });
+            return data;
           } else {
-            set({error: data.message ?? 'كود غير صحيح'});
+            const msg = data.message ?? 'كود غير صحيح';
+            set({error: msg});
+            throw new Error(msg);
           }
-          return data;
-        } catch {
-          set({error: 'خطأ في الشبكة'});
-          return {success: false, message: 'خطأ في الشبكة'};
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : 'خطأ في الشبكة';
+          set({error: msg});
+          throw err;
         } finally {
           set({isLoading: false});
         }
@@ -112,14 +133,35 @@ export const useAuthStore = create<AuthStore>()(
         }
       },
 
-      clearAuth: () =>
+      clearAuth: () => {
+        // SECURITY: Clear the token from the API client when logging out,
+        // so no subsequent requests use the stale token.
+        setAuthToken(null);
         set({
           user: null,
           token: null,
           refreshToken: null,
           isAuthenticated: false,
           error: null,
-        }),
+        });
+      },
+
+      checkAuth: async () => {
+        const {token, isAuthenticated} = get();
+        if (!token || !isAuthenticated) return false;
+        try {
+          const res = await apiClient.get('/auth/me');
+          if (res.data && res.data.id) {
+            set({user: res.data});
+            return true;
+          }
+          get().clearAuth();
+          return false;
+        } catch {
+          get().clearAuth();
+          return false;
+        }
+      },
     }),
     {
       name: 'anypay-auth',
@@ -130,6 +172,17 @@ export const useAuthStore = create<AuthStore>()(
         refreshToken: state.refreshToken,
         isAuthenticated: state.isAuthenticated,
       }),
+      // SECURITY: When persisted state is restored from AsyncStorage,
+      // synchronize the token with the API client so outgoing requests
+      // include the Authorization header. Without this, the API client
+      // would have no token until the next login.
+      onRehydrateStorage: () => (state) => {
+        if (state?.token) {
+          setAuthToken(state.token);
+        }
+      },
     },
   ),
 );
+
+export default useAuthStore;

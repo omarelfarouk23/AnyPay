@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useEffect, useCallback} from 'react';
 import {View, Text, StyleSheet, FlatList, TouchableOpacity} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {colors} from '../../config/colors';
@@ -9,10 +9,27 @@ import {TransactionItem} from '../../components/wallet/TransactionItem';
 import {useWalletStore} from '../../store/walletStore';
 import {useTheme} from '../../hooks/useTheme';
 import {formatDateAlgerian} from '../../utils/formatters';
+import {walletService} from '../../services/api/wallet';
 
 export const TransactionHistoryScreen: React.FC = () => {
-  const {transactions} = useWalletStore();
+  const {transactions, setTransactions, isLoading, setLoading} = useWalletStore();
   const {colors: themeColors} = useTheme();
+
+  const loadTransactions = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await walletService.getTransactions(20);
+      setTransactions(data);
+    } catch (err) {
+      console.error('[TransactionHistory] Failed:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [setTransactions, setLoading]);
+
+  useEffect(() => {
+    loadTransactions();
+  }, []);
 
   const renderItem = ({item}: {item: any}) => (
     <TransactionItem

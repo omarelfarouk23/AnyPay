@@ -1,5 +1,5 @@
-import React from 'react';
-import {View, Text, StyleSheet, FlatList, TouchableOpacity} from 'react-native';
+import React, {useState, useCallback, useEffect} from 'react';
+import {View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {colors} from '../../config/colors';
 import {borderRadius, spacing, typography} from '../../config/theme';
@@ -11,42 +11,61 @@ import {useChatStore} from '../../store/chatStore';
 import {useTheme} from '../../hooks/useTheme';
 import {Conversation} from '../../types/chat';
 import {formatDateAlgerian} from '../../utils/formatters';
+import {useNavigation} from '@react-navigation/native';
+import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import type {RootStackParamList} from '../../navigation/AppNavigator';
+import {conversationService} from '../../services/api/conversation';
+import {useAuthStore} from '../../store/authStore';
 
-interface ChatListScreenProps {
-  onSelectConversation?: (conversation: Conversation) => void;
-}
+interface ChatListScreenProps {}
 
-export const ChatListScreen: React.FC<ChatListScreenProps> = ({onSelectConversation}) => {
-  const {conversations, setLoading, isLoading} = useChatStore();
+export const ChatListScreen: React.FC<ChatListScreenProps> = () => {
+  const {conversations, setConversations, isLoading, setLoading, setActiveConversation, connectSocket} = useChatStore();
   const {colors: themeColors} = useTheme();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const {token} = useAuthStore();
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const loadConversations = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await conversationService.getConversations();
+      setConversations(data);
+    } catch (err) {
+      console.error('[ChatListScreen] Failed to load conversations:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [setConversations, setLoading]);
+
+  useEffect(() => {
+    loadConversations();
+    connectSocket();
+  }, []);
+
+  const filteredConversations = searchQuery
+    ? conversations.filter(
+        (c) =>
+          c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          c.lastMessage?.content?.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : conversations;
+
+  const handleConversationPress = (item: Conversation) => {
+      setActiveConversation(item);
+      navigation.navigate('Chat', {conversationId: item.id, conversationTitle: item.title});
+    };
 
   const renderItem = ({item}: {item: Conversation}) => (
-    <TouchableOpacity
-      style={styles.conversationItem}
-      onPress={() => onSelectConversation?.(item)}
-      activeOpacity={0.7}>
-      <Avatar
-        uri={item.avatarUrl}
-        name={item.title}
-        size={50}
-        showOnline={!!item.isTyping}
-        online={item.isTyping}
-      />
+    <TouchableOpacity style={styles.conversationItem} onPress={() => handleConversationPress(item)} activeOpacity={0.7}>
+      <Avatar uri={item.avatarUrl} name={item.title} size={50} showOnline={!!item.isTyping} online={item.isTyping} />
       <View style={styles.conversationContent}>
         <View style={styles.conversationHeader}>
-          <Text style={styles.conversationTitle} numberOfLines={1}>
-            {item.title}
-          </Text>
-          <Text style={styles.conversationTime}>
-            {formatDateAlgerian(item.updatedAt)}
-          </Text>
+          <Text style={styles.conversationTitle} numberOfLines={1}>{item.title}</Text>
+          <Text style={styles.conversationTime}>{formatDateAlgerian(item.updatedAt)}</Text>
         </View>
-        <Text style={styles.conversationSubtitle} numberOfLines={1}>
-          {item.lastMessage?.content ?? 'بدء محادثة جديدة'}
-        </Text>
-        {item.unreadCount > 0 && (
-          <Badge variant="accent">{item.unreadCount}</Badge>
-        )}
+        <Text style={styles.conversationSubtitle} numberOfLines={1}>{item.lastMessage?.content ?? 'بدء محادثة جديدة'}</Text>
+        {item.unreadCount > 0 && <Badge variant="accent">{item.unreadCount}</Badge>}
       </View>
     </TouchableOpacity>
   );
@@ -56,22 +75,20 @@ export const ChatListScreen: React.FC<ChatListScreenProps> = ({onSelectConversat
       <View style={styles.searchRow}>
         <View style={styles.searchInput}>
           <Icon name="search" size={20} color={colors.textTertiary} />
-          <Text style={styles.searchPlaceholder}>ابحث عن محادثات...</Text>
+          <TextInput
+            style={styles.searchField}
+            placeholder="ابحث عن محادثات..."
+            placeholderTextColor={colors.textTertiary}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
         </View>
-        <TouchableOpacity style={styles.filterButton}>
-          <Icon name="menu" size={20} color={colors.textSecondary} />
-        </TouchableOpacity>
+        <TouchableOpacity style={styles.filterButton}><Icon name="menu" size={20} color={colors.textSecondary} /></TouchableOpacity>
       </View>
       <View style={styles.tabs}>
-        <TouchableOpacity style={[styles.tab, styles.activeTab]}>
-          <Text style={styles.tabText}>جميع</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.tab}>
-          <Text style={styles.tabTextInactive}>غير مقروءة</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.tab}>
-          <Text style={styles.tabTextInactive}>الأرشفة</Text>
-        </TouchableOpacity>
+        <TouchableOpacity style={[styles.tab, styles.activeTab]}><Text style={styles.tabText}>جميع</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.tab}><Text style={styles.tabTextInactive}>غير مقروءة</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.tab}><Text style={styles.tabTextInactive}>الأرشفة</Text></TouchableOpacity>
       </View>
     </View>
   );
@@ -86,15 +103,9 @@ export const ChatListScreen: React.FC<ChatListScreenProps> = ({onSelectConversat
 
   return (
     <SafeAreaView style={[styles.container, {backgroundColor: colors.background}]}>
-      <Header
-        title="المحادثات"
-        rightIcon={<Icon name="plus" size={22} color={colors.textOnPrimary} />}
-        rightAction={() => {}}
-        backgroundColor={colors.primary}
-        tintColor={colors.textOnPrimary}
-      />
+      <Header title="المحادثات" rightIcon={<Icon name="plus" size={22} color={colors.textOnPrimary} />} rightAction={() => navigation.navigate('NewChat')} backgroundColor={colors.primary} tintColor={colors.textOnPrimary} />
       <FlatList
-        data={conversations}
+        data={filteredConversations}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
         ListHeaderComponent={renderHeader}
@@ -133,10 +144,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
-  searchPlaceholder: {
+  searchField: {
     flex: 1,
     fontSize: typography.md,
-    color: colors.textTertiary,
+    color: colors.textPrimary,
+    paddingLeft: spacing.xs,
   },
   filterButton: {
     width: 36,

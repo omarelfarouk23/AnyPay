@@ -12,6 +12,7 @@ import {colors} from '../../config/colors';
 import {borderRadius, spacing, typography, shadows} from '../../config/theme';
 import {Header} from '../../components/ui/Header';
 import {Card} from '../../components/ui/Card';
+import {useNavigation} from '@react-navigation/native';
 
 const faqs = [
   {
@@ -48,6 +49,7 @@ const faqs = [
 
 export const FAQScreen: React.FC = () => {
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
+  const navigation = useNavigation();
 
   const toggle = (idx: number) => {
     setExpandedIdx(expandedIdx === idx ? null : idx);
@@ -61,6 +63,8 @@ export const FAQScreen: React.FC = () => {
     <SafeAreaView style={{flex: 1}}>
       <Header
         title="الأسئلة الشائعة"
+        leftIcon={<Text style={{fontSize: 18, color: '#fff'}}>←</Text>}
+        leftAction={() => navigation.goBack()}
         rightIcon={
           <TouchableOpacity onPress={toggleAll} style={styles.headerRight}>
             <Text style={styles.headerRightText}>

@@ -7,6 +7,8 @@ export interface Wallet {
   currency: string;
   createdAt: string;
   updatedAt: string;
+  isKycVerified?: boolean;
+  twoFactorEnabled?: boolean;
 }
 
 export interface Transaction {

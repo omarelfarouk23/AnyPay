@@ -3,6 +3,13 @@ import { apiClient, handleApiError } from './client';
 import type { Conversation, Message } from '../../types/chat';
 import type { PaginatedResponse } from '../../types/api';
 
+export interface AttachmentPayload {
+  uri: string;
+  type: string;
+  fileName: string;
+  size: number;
+}
+
 export const conversationService = {
   async getConversations(): Promise<Conversation[]> {
     try {
@@ -37,6 +44,19 @@ export const conversationService = {
     }
   },
 
+  async sendMessageWithAttachment(conversationId: string, attachment: AttachmentPayload): Promise<Message> {
+    try {
+      const res = await apiClient.post<Message>(
+        `/conversations/${conversationId}/messages`,
+        { attachment }
+      );
+      return res.data;
+    } catch (error) {
+      const err = handleApiError(error);
+      throw new Error(err.message);
+    }
+  },
+
   async getMessages(conversationId: string, before?: number, limit = 50): Promise<Message[]> {
     try {
       const res = await apiClient.get<Message[]>(
@@ -52,6 +72,16 @@ export const conversationService = {
   async markAsRead(conversationId: string): Promise<void> {
     try {
       await apiClient.post(`/conversations/${conversationId}/read`);
+    } catch (error) {
+      const err = handleApiError(error);
+      throw new Error(err.message);
+    }
+  },
+
+  async createConversation(contactId: string, title: string): Promise<{ conversationId: string }> {
+    try {
+      const res = await apiClient.post('/conversations/create', { contactId, title });
+      return res.data;
     } catch (error) {
       const err = handleApiError(error);
       throw new Error(err.message);

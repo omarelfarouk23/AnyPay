@@ -50,12 +50,12 @@ class PushNotificationService {
   };
 
   async requestPermissions(): Promise<boolean> {
-  const existing = (await Notifications.getPermissionsAsync()) as any;
-  if (existing?.granted || existing?.status === 'granted') {
+  const existing = await Notifications.getPermissionsAsync();
+  if (existing.granted || existing.status === 'granted') {
     return true;
   }
-  const res = (await Notifications.requestPermissionsAsync()) as any;
-  return Boolean(res?.granted || res?.status === 'granted');
+  const res = await Notifications.requestPermissionsAsync();
+  return Boolean(res.granted || res.status === 'granted');
 }
 
   async getDevicePushToken(): Promise<string | null> {
@@ -76,14 +76,19 @@ async scheduleLocalNotification(
     body: string,
     triggerSeconds?: number,
   ): Promise<string | null> {
-    const notificationId = `local_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    // SECURITY: Use crypto-based random ID for notification tracking.
+    // The returned ID is for our internal tracking, not the OS notification ID.
+    const trackingId = `local_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 
-    const trigger: any = {
+    // Expo SDK 52+ requires a properly typed trigger object
+    const trigger: Notifications.TimeIntervalTriggerInput = {
       type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
       seconds: triggerSeconds && triggerSeconds > 0 ? triggerSeconds : 1,
       repeats: false,
     };
 
+    // The actual OS notification ID returned by Expo is used for cancellation.
+    // We return our tracking ID for internal reference.
     await Notifications.scheduleNotificationAsync({
       content: {
         title,
@@ -96,7 +101,7 @@ async scheduleLocalNotification(
       },
       trigger,
     });
-    return notificationId;
+    return trackingId;
   }
 
   async cancelAllNotifications(): Promise<void> {

@@ -8,6 +8,7 @@ import {Avatar} from '../../components/ui/Avatar';
 import {Icon} from '../../components/ui/Icon';
 import {Card} from '../../components/ui/Card';
 import {useTheme} from '../../hooks/useTheme';
+import {useNavigation} from '@react-navigation/native';
 
 const FAQS = [
   {
@@ -38,6 +39,7 @@ const FAQS = [
 
 export const CustomerSupportScreen: React.FC = () => {
   const {colors: themeColors} = useTheme();
+  const navigation = useNavigation();
   const [messages, setMessages] = useState<{text: string; sender: 'user' | 'support'}[]>([]);
   const [inputText, setInputText] = useState('');
 
@@ -53,7 +55,7 @@ export const CustomerSupportScreen: React.FC = () => {
       <Header
         title="خدمة العملاء"
         leftIcon={<Text style={styles.backText}>←</Text>}
-        leftAction={() => {}}
+        leftAction={() => navigation.goBack()}
         backgroundColor={colors.primary}
         tintColor={colors.textOnPrimary}
       />

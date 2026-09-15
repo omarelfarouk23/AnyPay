@@ -1,4 +1,6 @@
 // src/screens/auth/LoginScreen.tsx
+// SECURITY: OTP is sent by the server (via SMS), never generated client-side.
+// RATE LIMITING: OTP resend is throttled to prevent SMS spam/abuse.
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet,
@@ -9,16 +11,14 @@ import { useNavigation } from '@react-navigation/native';
 import { Button } from '../../components/ui/Button';
 import { TextInput } from '../../components/ui/TextInput';
 import { Avatar } from '../../components/ui/Avatar';
-import { colors, spacing, borderRadius, shadows, typography } from '../../config/theme';
-import { validatePhoneNumber } from '../../utils/validators';
-import { useAuthStore } from '../../store';
-import { apiClient } from '../../services/api/client';
+import {colors, spacing, borderRadius, shadows, typography} from '../../config/theme';
+import {validatePhoneNumber} from '../../utils/validators';
+import {useAuthStore} from '../../store/authStore';
+import type {User} from '../../types/user';
 
-function generateOtp(): string {
-  const array = new Uint32Array(1);
-  crypto.getRandomValues(array);
-  return (array[0] % 900000 + 100000).toString();
-}
+// Rate limit: minimum 60 seconds between OTP resend attempts.
+// This prevents SMS cost abuse and carrier throttling.
+const OTP_RESEND_COOLDOWN_SECONDS = 60;
 
 export const LoginScreen: React.FC = () => {
   const navigation = useNavigation<any>();
@@ -29,10 +29,36 @@ export const LoginScreen: React.FC = () => {
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [loading, setLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
-  const otpRef = useRef<string>('');
 
+  // Rate limiting state for OTP resend
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const cooldownTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Cleanup cooldown timer on unmount
   useEffect(() => {
-    setUser(null);
+    return () => {
+      if (cooldownTimer.current) {
+        clearInterval(cooldownTimer.current);
+        cooldownTimer.current = null;
+      }
+    };
+  }, []);
+
+  // Start cooldown timer after OTP is sent
+  const startResendCooldown = useCallback(() => {
+    setResendCooldown(OTP_RESEND_COOLDOWN_SECONDS);
+    cooldownTimer.current = setInterval(() => {
+      setResendCooldown((prev) => {
+        if (prev <= 1) {
+          if (cooldownTimer.current) {
+            clearInterval(cooldownTimer.current);
+            cooldownTimer.current = null;
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
   }, []);
 
   const handleSendOtp = async () => {
@@ -42,18 +68,29 @@ export const LoginScreen: React.FC = () => {
       return;
     }
 
+    // Enforce rate limit on resend
+    if (resendCooldown > 0) {
+      Alert.alert('انتظر', `يمكنك إعادة الإرسال بعد ${resendCooldown} ثانية.`);
+      return;
+    }
+
     setLoading(true);
     try {
+      // SECURITY: The server generates and sends the OTP via SMS.
+      // The client only triggers the send — it never generates or stores OTPs.
+      const { apiClient } = await import('../../services/api/client');
       const res = await apiClient.post('/auth/otp/send', { phoneNumber: cleaned });
-      const data = res.data;
+      const data = res.data as { success: boolean; message?: string };
+
       if (!data.success) {
         setError(data.message ?? 'فشل إرسال الرمز.');
         Alert.alert('خطأ', data.message ?? 'حاول مرة أخرى.');
         return;
       }
-      otpRef.current = generateOtp();
+
       setStep('otp');
       setOtpSent(true);
+      startResendCooldown();
     } catch {
       setError('فشل إرسال الرمز.');
       Alert.alert('خطأ', 'حاول مرة أخرى.');
@@ -74,17 +111,32 @@ export const LoginScreen: React.FC = () => {
 
     setLoading(true);
     try {
-      setUser({
-        id: 'user_demo',
-        phoneNumber: phone,
-        phone: phone,
-        fullName: 'مستخدم',
-        name: 'مستخدم',
-        status: 'active',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        isVerified: true,
+      // SECURITY: Verify OTP against the server. The server validates
+      // the OTP and returns an auth token — never trust client-side OTP checks.
+      const { apiClient, setAuthToken } = await import('../../services/api/client');
+      const cleaned = phone.replace(/\s/g, '');
+      const res = await apiClient.post('/auth/otp/verify', {
+        phoneNumber: cleaned,
+        otp: otp.trim(),
       });
+      const data = res.data as {
+        success: boolean;
+        user?: { id: string; phoneNumber: string; fullName: string; status: string; createdAt: string; updatedAt: string; isVerified: boolean };
+        token?: string;
+        message?: string;
+      };
+
+      if (!data.success || !data.user || !data.token) {
+        setError(data.message ?? 'رمز غير صحيح.');
+        Alert.alert('رمز غير صحيح', 'يرجى إعادة محاولة الرمز.');
+        return;
+      }
+
+      // Store the server-issued auth token
+      setAuthToken(data.token);
+
+      // Set user from server response — never fabricate user data client-side
+      setUser(data.user as User);
 
       navigation.reset({
         index: 0,
@@ -170,8 +222,12 @@ export const LoginScreen: React.FC = () => {
 
             {otpSent && (
               <Text style={styles.resendText}>
-                لم يصلك الرمز؟{' '}
-                <Text style={styles.resendLink} onPress={handleSendOtp}>أعد الإرسال</Text>
+                {resendCooldown > 0
+                  ? `يمكنك إعادة الإرسال بعد ${resendCooldown} ثانية`
+                  : 'لم يصلك الرمز؟ '}
+                {resendCooldown === 0 && (
+                  <Text style={styles.resendLink} onPress={handleSendOtp}>أعد الإرسال</Text>
+                )}
               </Text>
             )}
 
@@ -189,6 +245,7 @@ export const LoginScreen: React.FC = () => {
   );
 };
 
+// Styles defined outside component to prevent recreation on every render
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,

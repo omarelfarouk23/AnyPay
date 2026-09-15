@@ -67,32 +67,47 @@ export const AttachmentPicker: React.FC<{
     }
   };
 
+  const pickCamera = async () => {
+    setLoading(true);
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.8,
+        allowsEditing: true,
+        aspect: [4, 3],
+      });
+      if (!result.canceled && result.assets?.[0]) {
+        const asset = result.assets[0];
+        onSelect({
+          uri: asset.uri ?? '',
+          type: asset.mimeType ?? 'image/jpeg',
+          name: asset.fileName ?? 'photo.jpg',
+          size: asset.fileSize ?? 0,
+        });
+      }
+    } catch (err) {
+      console.error('AttachmentPicker: camera error', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>إرفاق ملف</Text>
-      <TouchableOpacity
-        style={[styles.option, loading && styles.optionDisabled]}
-        onPress={pickImage}
-        disabled={loading}
-        activeOpacity={0.7}
-      >
+      <TouchableOpacity style={[styles.option, loading && styles.optionDisabled]} onPress={pickCamera} disabled={loading} activeOpacity={0.7}>
+        <Icon name="camera" size={28} color={colors.primary} />
+        <Text style={styles.optionText}>كاميرا</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={[styles.option, loading && styles.optionDisabled]} onPress={pickImage} disabled={loading} activeOpacity={0.7}>
         <Icon name="image" size={28} color={colors.primary} />
         <Text style={styles.optionText}>صورة</Text>
       </TouchableOpacity>
-      <TouchableOpacity
-        style={[styles.option, loading && styles.optionDisabled]}
-        onPress={pickFile}
-        disabled={loading}
-        activeOpacity={0.7}
-      >
+      <TouchableOpacity style={[styles.option, loading && styles.optionDisabled]} onPress={pickFile} disabled={loading} activeOpacity={0.7}>
         <Icon name="document" size={28} color={colors.primary} />
         <Text style={styles.optionText}>ملف</Text>
       </TouchableOpacity>
-      <TouchableOpacity
-        style={styles.cancel}
-        onPress={onCancel}
-        activeOpacity={0.7}
-      >
+      <TouchableOpacity style={styles.cancel} onPress={onCancel} activeOpacity={0.7}>
         <Text style={styles.cancelText}>إلغاء</Text>
       </TouchableOpacity>
     </View>

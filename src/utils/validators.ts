@@ -10,7 +10,7 @@ export const validateOTP = (otp: string): boolean => {
 };
 
 export const validateAmount = (amount: number, min = 1, max = 1000000): { valid: boolean; error?: string } => {
-  if (isNaN(amount) || amount <= 0) return { valid: false, error: 'المبلغ must يكون رقماً موجباً' };
+  if (isNaN(amount) || amount <= 0) return { valid: false, error: 'المبلغ يجب أن يكون رقماً موجباً' };
   if (amount < min) return { valid: false, error: `الحد الأدنى هو ${min} د.ج` };
   if (amount > max) return { valid: false, error: `الحد الأقصى هو ${max} د.ج` };
   return { valid: true };

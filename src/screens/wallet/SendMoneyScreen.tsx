@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useState, useCallback} from 'react';
 import {View, Text, StyleSheet, ScrollView, TouchableOpacity} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {colors} from '../../config/colors';
@@ -10,37 +10,59 @@ import {TextInput} from '../../components/ui/TextInput';
 import {useWalletStore} from '../../store/walletStore';
 import {useAuthStore} from '../../store/authStore';
 import {useTheme} from '../../hooks/useTheme';
+import {useNavigation} from '@react-navigation/native';
+import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import type {RootStackParamList} from '../../navigation/AppNavigator';
+import {walletService} from '../../services/api/wallet';
+import {userService} from '../../services/api/user';
 
 export const SendMoneyScreen: React.FC = () => {
-  const {isSending} = useWalletStore();
+  const {isSending, setSending} = useWalletStore();
   const {user} = useAuthStore();
   const {colors: themeColors} = useTheme();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
-  const [recipient, setRecipient] = React.useState('');
-  const [amount, setAmount] = React.useState('');
-  const [description, setDescription] = React.useState('');
+  const [recipient, setRecipient] = useState('');
+  const [amount, setAmount] = useState('');
+  const [description, setDescription] = useState('');
+  const [error, setError] = useState('');
 
   const amountNum = parseFloat(amount.replace(/[^0-9.]/g, '')) || 0;
   const isValidAmount = amountNum > 0 && amountNum <= 1000000;
   const canSend = recipient.trim().length > 0 && isValidAmount && !isSending;
 
-  const handleSend = async () => {
+  const handleSend = useCallback(async () => {
     if (!canSend) return;
-    await new Promise((r) => setTimeout(r, 1500));
-  };
+    setSending(true);
+    setError('');
+    try {
+      const tx = await walletService.sendMoney(recipient, amountNum, description);
+      navigation.goBack();
+    } catch (err) {
+      setError('تعذّر إرسال الأموال، حاول مرة أخرى');
+      console.error('[SendMoneyScreen] Failed:', err);
+    } finally {
+      setSending(false);
+    }
+  }, [recipient, amountNum, description, canSend, isSending]);
 
   return (
     <SafeAreaView style={[styles.container, {backgroundColor: colors.background}]}>
       <Header
-        title="إرسال أموال"
-        leftIcon={<Text style={styles.backText}>←</Text>}
-        leftAction={() => {}}
-        backgroundColor={colors.primary}
-        tintColor={colors.textOnPrimary}
-      />
+              title="إرسال أموال"
+              leftIcon={<Text style={styles.backText}>←</Text>}
+              leftAction={() => navigation.goBack()}
+              backgroundColor={colors.primary}
+              tintColor={colors.textOnPrimary}
+            />
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.section}>
+            <ScrollView contentContainerStyle={styles.scrollContent}>
+              {error ? (
+                <View style={styles.errorBanner}>
+                  <Text style={styles.errorBannerText}>{error}</Text>
+                </View>
+              ) : null}
+              <View style={styles.section}>
           <Text style={styles.sectionTitle}>معلومات المستلم</Text>
           <View style={[styles.inputCard, {backgroundColor: colors.card}]}>
             <View style={styles.inputCardInner}>
@@ -348,5 +370,19 @@ const styles = StyleSheet.create({
     fontSize: typography.xs,
     color: colors.warning,
     lineHeight: 18,
+  },
+  errorBanner: {
+    backgroundColor: colors.errorLight,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.md,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.md,
+  },
+  errorBannerText: {
+    color: colors.error,
+    fontSize: typography.sm,
+    fontWeight: typography.weights.medium,
+    textAlign: 'center',
   },
 });

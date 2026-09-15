@@ -11,6 +11,8 @@ export interface MessageBubbleProps {
   senderName?: string;
   isImage?: boolean;
   imageUri?: string;
+  type?: string;
+  attachment?: {uri: string; type: string; fileName: string; size: number};
   style?: ViewStyle;
   onPress?: () => void;
 }
@@ -35,15 +37,18 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   senderName,
   isImage = false,
   imageUri,
+  type,
+  attachment,
   style,
   onPress,
 }) => {
+  const isMediaType = type === 'image' || type === 'file' || !!attachment;
   const alignment = outgoing ? styles.outgoing : styles.incoming;
   const bubbleColor = outgoing ? colors.primary : colors.surface;
   const textColor = outgoing ? colors.textOnPrimary : colors.textPrimary;
   const borderWidth = outgoing ? 0 : 1;
 
-  const showStatus = outgoing && status && !isImage;
+  const showStatus = outgoing && status && !isMediaType;
 
   return (
     <View style={[styles.wrapper, alignment, style]}>
@@ -52,15 +57,33 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         style={[
           styles.bubble,
           {backgroundColor: bubbleColor, borderWidth, borderColor: colors.borderLight},
-          isImage && styles.imageBubble,
+          isMediaType && styles.imageBubble,
           outgoing && {borderBottomRightRadius: 4},
         ]}
         onTouchEnd={onPress}>
-        {isImage ? (
-          <View style={styles.imageContainer}>
-            <Text style={styles.imagePlaceholder}>🖼️</Text>
-          </View>
-        ) : (
+        {isMediaType ? (
+                  <View style={styles.imageContainer}>
+                    {attachment?.uri && type?.startsWith('image/') ? (
+                      <>
+                        <Text style={styles.imagePlaceholder}>📷</Text>
+                        <Text style={styles.fileName}>{attachment.fileName}</Text>
+                        <Text style={styles.fileSize}>
+                          {(attachment.size / 1024).toFixed(0)} KB
+                        </Text>
+                      </>
+                    ) : attachment ? (
+                      <>
+                        <Text style={styles.imagePlaceholder}>📎</Text>
+                        <Text style={styles.fileName}>{attachment.fileName}</Text>
+                        <Text style={styles.fileSize}>
+                          {(attachment.size / 1024).toFixed(0)} KB
+                        </Text>
+                      </>
+                    ) : (
+                      <Text style={styles.imagePlaceholder}>🖼️</Text>
+                    )}
+                  </View>
+                ) : (
           <>
             {senderName && (
               <Text style={[styles.senderName, {color: outgoing ? 'rgba(255,255,255,0.7)' : colors.textTertiary}]}>
@@ -150,6 +173,16 @@ const styles = StyleSheet.create({
   },
   imagePlaceholder: {
     fontSize: 40,
+  },
+  fileName: {
+    fontSize: typography.xs,
+    color: colors.textTertiary,
+    marginTop: 4,
+  },
+  fileSize: {
+    fontSize: typography.xs,
+    color: colors.textTertiary,
+    marginTop: 2,
   },
   alignmentMarkerLeft: {
     width: 4,
